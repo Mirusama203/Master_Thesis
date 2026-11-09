@@ -4,6 +4,10 @@ Master's thesis project, M.Eng. Software-based Automotive Systems, Hochschule Es
 
 A web-based software-in-the-loop (SiL) simulator for testing how a connected-car application behaves when it sends remote commands (lock, unlock, open and close windows) to a vehicle backend. No vehicle or test bench is needed. The simulator can answer with success, a specific failure, or a timeout, so that an app's error handling can be tested on demand.
 
+![Vehicle Status Dashboard: a lock command fails with DOOR_OPEN because a door is open](docs/dashboard.png)
+
+*The Vehicle Status Dashboard after a `lock_doors` command on a vehicle with an open door: the simulator answers `failed: DOOR_OPEN`.*
+
 ## What it does
 
 - **Simulated vehicle backend** (FastAPI) with five fictional vehicles, each with its own VIN and engine type: electric, internal combustion, hybrid, plug-in hybrid and fuel cell.
@@ -64,9 +68,33 @@ curl -X POST localhost:8000/WDD2131415162/command -H 'content-type: application/
   -d '{"command":"lock_doors","test_delay":2}'
 ```
 
+## Tests
+
+An automated pytest suite checks the API (status validation, override handling, every command and its error codes, timeouts) against a fresh temporary database. The simulated network delay is skipped in tests, so the whole suite runs in about a second.
+
+```bash
+cd connected-car-sim
+pip install -r requirements-dev.txt
+python -m pytest -q
+```
+
+The tests also run on every push through GitHub Actions (`.github/workflows/tests.yml`).
+
 ## Tech stack
 
 Python, FastAPI, Pydantic, SQLite, Uvicorn, HTML, CSS and JavaScript (Fetch API).
+
+## Possible extensions
+
+- Docker setup (`docker compose up`) to start the backend and serve both frontends.
+- Configurable `API_URL` in the frontends, instead of the fixed `http://localhost:8000`.
+- More commands, for example preconditioning and remote engine start, with their own failure rules.
+- Fault injection beyond timeouts, such as random packet loss or delayed status updates.
+- A CLI or pytest plugin that runs scripted test scenarios against the simulator.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
 
 ## Notes
 
