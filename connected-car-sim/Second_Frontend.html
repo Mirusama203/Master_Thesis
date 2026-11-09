@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vehicle Status Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f2f5;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    #homePage ul {
+      list-style: none;
+      padding: 0;
+      max-width: 500px;
+      margin: 20px auto;
+    }
+    #homePage li {
+      padding: 10px 20px;
+      margin: 10px 0;
+      background: #fff;
+      border-radius: 5px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .vin-panel {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 0 auto 20px auto;
+      max-width: 700px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .status-item {
+      margin: 5px 0;
+      font-size: 14px;
+    }
+    .command-table {
+      margin: 20px auto;
+      width: 700px;
+      border-collapse: collapse;
+    }
+    .command-table th, .command-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    .command-table th {
+      background-color: #3498db;
+      color: white;
+    }
+    button {
+      padding: 6px 12px;
+      margin: 4px 2px;
+      background: #2980b9;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #1c6690;
+    }
+  </style>
+</head>
+<body>
+  <h1>Vehicle Status Dashboard</h1>
+
+  <div id="homePage">
+    <ul>
+      <li onclick="loadVINPage('WDD2131415161')">WDD2131415161</li>
+      <li onclick="loadVINPage('WDD2131415162')">WDD2131415162</li>
+      <li onclick="loadVINPage('WDD2131415163')">WDD2131415163</li>
+      <li onclick="loadVINPage('WDD2131415164')">WDD2131415164</li>
+      <li onclick="loadVINPage('WDD2131415165')">WDD2131415165</li>
+    </ul>
+  </div>
+
+  <div id="vinPage" style="display:none;">
+    <div id="vinPanel" class="vin-panel"></div>
+    <table class="command-table">
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Status</th>
+          <th>Execution</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Lock Doors</td>
+          <td id="lockStatus">-</td>
+          <td><button onclick="sendCommand('lock_doors', 'lockStatus')">Execute</button></td>
+        </tr>
+        <tr>
+          <td>Unlock Doors</td>
+          <td id="unlockStatus">-</td>
+          <td><button onclick="sendCommand('unlock_doors', 'unlockStatus')">Execute</button></td>
+        </tr>
+        <tr>
+          <td>Open Windows</td>
+          <td id="openWinStatus">-</td>
+          <td><button onclick="sendCommand('open_windows', 'openWinStatus')">Execute</button></td>
+        </tr>
+        <tr>
+          <td>Close Windows</td>
+          <td id="closeWinStatus">-</td>
+          <td><button onclick="sendCommand('close_windows', 'closeWinStatus')">Execute</button></td>
+        </tr>
+      </tbody>
+    </table>
+    <button onclick="showHomePage()">Return to Home</button>
+  </div>
+
+  <script>
+    const apiBase = "http://localhost:8000";
+    let currentVIN = null;
+
+    function showHomePage() {
+      document.getElementById("homePage").style.display = "block";
+      document.getElementById("vinPage").style.display = "none";
+    }
+
+    async function loadVINPage(vin) {
+      currentVIN = vin;
+      document.getElementById("homePage").style.display = "none";
+      document.getElementById("vinPage").style.display = "block";
+
+      const res = await fetch(`${apiBase}/${vin}/status`);
+      const data = await res.json();
+
+      const panel = document.getElementById("vinPanel");
+      panel.innerHTML = `
+        <h2>VIN: ${vin}</h2>
+        <div class="status-item"><strong>Mileage:</strong> ${data.mileage ?? 'N/A'} km</div>
+        <div class="status-item"><strong>Tyre FL:</strong> ${data.tyre_fl ?? 'N/A'} bar</div>
+        <div class="status-item"><strong>Tyre FR:</strong> ${data.tyre_fr ?? 'N/A'} bar</div>
+        <div class="status-item"><strong>Tyre RL:</strong> ${data.tyre_rl ?? 'N/A'} bar</div>
+        <div class="status-item"><strong>Tyre RR:</strong> ${data.tyre_rr ?? 'N/A'} bar</div>
+        <div class="status-item"><strong>Fuel Level:</strong> ${data.fuel_level ?? 'N/A'}%</div>
+        <div class="status-item"><strong>Range:</strong> ${data.range_km ?? 'N/A'} km</div>
+        <div class="status-item"><strong>Consumption:</strong> ${data.consumption ?? 'N/A'} L/100km</div>
+        <div class="status-item"><strong>Service Status:</strong> ${data.service_status ?? 'N/A'}</div>
+        <div class="status-item"><strong>Coolant Status:</strong> ${data.coolant_status ?? 'N/A'}</div>
+        <div class="status-item"><strong>Windows Status:</strong> ${data.windows_status ?? 'N/A'}</div>
+        <div class="status-item"><strong>Door Status:</strong> ${data.door_status ?? 'N/A'}</div>
+        <div class="status-item"><strong>Door Lock Status:</strong> ${data.door_lock_status ?? 'N/A'}</div>
+      `;
+    }
+
+    async function getOverride(vin) {
+      try {
+        const res = await fetch(`${apiBase}/${vin}/override`);
+        if (!res.ok) return {};
+        return await res.json();
+      } catch (err) {
+        console.error("Failed to fetch override:", err);
+        return {};
+      }
+    }
+
+    async function sendCommand(command, statusId) {
+      const statusCell = document.getElementById(statusId);
+      statusCell.innerHTML = "Processing...";
+
+      const override = await getOverride(currentVIN);
+      if (override[command] === "success") {
+        statusCell.innerHTML = "✅ Success (Override)";
+        await loadVINPage(currentVIN);
+        return;
+      } else if (override[command] === "failed") {
+        statusCell.innerHTML = "❌ Failed (Override)";
+        await loadVINPage(currentVIN);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${apiBase}/${currentVIN}/command`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command, test_delay: 2 })
+        });
+        const data = await res.json();
+
+        if (data.result === "success") {
+          statusCell.innerHTML = "✅ Success";
+        } else if (data.result === "failed") {
+          statusCell.innerHTML = `❌ Failed: ${data.error_code}`;
+        } else if (data.result === "timeout") {
+          statusCell.innerHTML = "⌛ Timed Out";
+        } else {
+          statusCell.innerHTML = "❓ Unknown Result";
+        }
+
+        await loadVINPage(currentVIN);
+      } catch (err) {
+        statusCell.innerHTML = "❌ Error contacting server";
+      }
+    }
+
+    showHomePage();
+  </script>
+</body>
+</html>
